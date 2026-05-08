@@ -3,9 +3,11 @@ options:
   bundleIdPrefix: com.shortcutgenius
   deploymentTarget:
     iOS: "18.0"
+    macOS: "15.0"
   developmentLanguage: en
   xcodeVersion: "16.0"
   createIntermediateGroups: true
+
 settings:
   base:
     SWIFT_VERSION: "6.0"
@@ -13,20 +15,27 @@ settings:
     GENERATE_INFOPLIST_FILE: NO
     ENABLE_USER_SCRIPT_SANDBOXING: YES
     DEVELOPMENT_TEAM: ""
+    SWIFT_TREAT_WARNINGS_AS_ERRORS: NO
 
 targets:
-  ShortcutGenius:
+  ShortcutGenius-iOS:
     type: application
     platform: iOS
     deploymentTarget: "18.0"
+    productName: "Shortcut Genius"
     sources:
       - path: ShortcutGenius
         excludes:
           - "Resources/Info.plist"
+          - "Resources/macOS-Info.plist"
           - "Resources/PrivacyInfo.xcprivacy"
           - "Resources/ShortcutGenius.entitlements"
+          - "Resources/macOS.entitlements"
+          - "Features/Mac/**"
     resources:
-      - ShortcutGenius/Resources/PrivacyInfo.xcprivacy
+      - path: ShortcutGenius/Resources/PrivacyInfo.xcprivacy
+      - path: ShortcutGenius/Assets.xcassets
+        optional: true
     info:
       path: ShortcutGenius/Resources/Info.plist
     entitlements:
@@ -38,6 +47,7 @@ targets:
         TARGETED_DEVICE_FAMILY: "1,2"
         SUPPORTS_MACCATALYST: NO
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         CURRENT_PROJECT_VERSION: 1
         MARKETING_VERSION: "1.0.0"
         CODE_SIGN_STYLE: Automatic
@@ -48,6 +58,39 @@ targets:
       testTargets:
         - ShortcutGeniusTests
       gatherCoverageData: true
+
+  ShortcutGenius-macOS:
+    type: application
+    platform: macOS
+    deploymentTarget: "15.0"
+    productName: "Shortcut Genius"
+    sources:
+      - path: ShortcutGenius
+        excludes:
+          - "Resources/Info.plist"
+          - "Resources/macOS-Info.plist"
+          - "Resources/PrivacyInfo.xcprivacy"
+          - "Resources/ShortcutGenius.entitlements"
+          - "Resources/macOS.entitlements"
+          - "Features/Scan/ScannerView.swift"
+    resources:
+      - path: ShortcutGenius/Resources/PrivacyInfo.xcprivacy
+      - path: ShortcutGenius/Assets.xcassets
+        optional: true
+    info:
+      path: ShortcutGenius/Resources/macOS-Info.plist
+    entitlements:
+      path: ShortcutGenius/Resources/macOS.entitlements
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.shortcutgenius.app.mac
+        PRODUCT_NAME: "Shortcut Genius"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        CURRENT_PROJECT_VERSION: 1
+        MARKETING_VERSION: "1.0.0"
+        CODE_SIGN_STYLE: Automatic
+        ENABLE_HARDENED_RUNTIME: YES
 
   ShortcutGeniusWidgets:
     type: app-extension
@@ -75,8 +118,31 @@ targets:
     sources:
       - ShortcutGeniusTests
     dependencies:
-      - target: ShortcutGenius
+      - target: ShortcutGenius-iOS
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.shortcutgenius.app.tests
         CODE_SIGN_STYLE: Automatic
+
+schemes:
+  ShortcutGenius (iOS):
+    build:
+      targets:
+        ShortcutGenius-iOS: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - ShortcutGeniusTests
+    archive:
+      config: Release
+
+  ShortcutGenius (macOS):
+    build:
+      targets:
+        ShortcutGenius-macOS: all
+    run:
+      config: Debug
+    archive:
+      config: Release

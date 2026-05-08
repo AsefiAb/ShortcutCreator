@@ -4,6 +4,7 @@ import StoreKit
 struct SettingsView: View {
     @Environment(AppEnvironment.self) private var env
     @State private var showingPaywall = false
+    @State private var anthropicKey = KeychainStore.read(forKey: AIProviderKind.anthropic.keychainKey) ?? ""
     @State private var openAIKey = KeychainStore.read(forKey: AIProviderKind.openai.keychainKey) ?? ""
     @State private var grokKey = KeychainStore.read(forKey: AIProviderKind.grok.keychainKey) ?? ""
 
@@ -23,26 +24,49 @@ struct SettingsView: View {
                         }
                     }
 
-                    if env.preferences.preferredProvider == .openai {
-                        SecureField("OpenAI API key (sk-…)", text: $openAIKey)
+                    switch env.preferences.preferredProvider {
+                    case .anthropic:
+                        SecureField("Claude API key (sk-ant-…)", text: $anthropicKey)
+                            .textContentType(.password)
+                            #if os(iOS)
                             .textInputAutocapitalization(.never)
-                            .onSubmit { KeychainStore.save(openAIKey, forKey: AIProviderKind.openai.keychainKey) }
-                        Button("Save key") {
+                            #endif
+                        Button("Save Claude key") {
+                            KeychainStore.save(anthropicKey, forKey: AIProviderKind.anthropic.keychainKey)
+                            env.haptics.tap()
+                        }
+                        Picker("Model", selection: anthropicModelBinding()) {
+                            Text("Claude Opus 4.7").tag("claude-opus-4-7")
+                            Text("Claude Sonnet 4.6").tag("claude-sonnet-4-6")
+                            Text("Claude Haiku 4.5").tag("claude-haiku-4-5-20251001")
+                        }
+                    case .openai:
+                        SecureField("OpenAI API key (sk-…)", text: $openAIKey)
+                            .textContentType(.password)
+                            #if os(iOS)
+                            .textInputAutocapitalization(.never)
+                            #endif
+                        Button("Save OpenAI key") {
                             KeychainStore.save(openAIKey, forKey: AIProviderKind.openai.keychainKey)
                             env.haptics.tap()
                         }
-                    }
-
-                    if env.preferences.preferredProvider == .grok {
-                        SecureField("Grok / xAI API key", text: $grokKey)
+                    case .grok:
+                        SecureField("xAI / Grok API key", text: $grokKey)
+                            .textContentType(.password)
+                            #if os(iOS)
                             .textInputAutocapitalization(.never)
-                        Button("Save key") {
+                            #endif
+                        Button("Save Grok key") {
                             KeychainStore.save(grokKey, forKey: AIProviderKind.grok.keychainKey)
                             env.haptics.tap()
                         }
+                    case .onDeviceOnly:
+                        Text("On-device only: matches your idea against the 100+ built-in templates. No network calls.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
                 } header: { Text("AI generation") } footer: {
-                    Text("Keys are stored only in your device's Keychain. We never see them.")
+                    Text("Keys are stored only in your device's Keychain. We never see them. CI / dev environments may also pass them via the ANTHROPIC_API_KEY environment variable.")
                 }
 
                 Section {
@@ -73,6 +97,10 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("Settings")
+            #if os(macOS)
+            .formStyle(.grouped)
+            .frame(minWidth: 480)
+            #endif
             .sheet(isPresented: $showingPaywall) { PaywallView() }
         }
     }
@@ -81,6 +109,13 @@ struct SettingsView: View {
         Binding(
             get: { env.preferences.preferredProvider },
             set: { env.preferences.preferredProvider = $0 }
+        )
+    }
+
+    private func anthropicModelBinding() -> Binding<String> {
+        Binding(
+            get: { env.preferences.preferredAnthropicModel },
+            set: { env.preferences.preferredAnthropicModel = $0 }
         )
     }
 

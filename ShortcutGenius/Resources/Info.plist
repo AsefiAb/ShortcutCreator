@@ -20,8 +20,6 @@
     <string>1.0.0</string>
     <key>CFBundleVersion</key>
     <string>1</string>
-    <key>LSRequiresIPhoneOS</key>
-    <true/>
     <key>UILaunchScreen</key>
     <dict/>
     <key>UIApplicationSceneManifest</key>
@@ -32,12 +30,32 @@
     <key>UISupportedInterfaceOrientations</key>
     <array>
         <string>UIInterfaceOrientationPortrait</string>
+        <string>UIInterfaceOrientationLandscapeLeft</string>
+        <string>UIInterfaceOrientationLandscapeRight</string>
     </array>
-    <key>UIRequiredDeviceCapabilities</key>
+    <key>UISupportedInterfaceOrientations~ipad</key>
     <array>
-        <string>arm64</string>
+        <string>UIInterfaceOrientationPortrait</string>
+        <string>UIInterfaceOrientationPortraitUpsideDown</string>
+        <string>UIInterfaceOrientationLandscapeLeft</string>
+        <string>UIInterfaceOrientationLandscapeRight</string>
     </array>
-
+    <key>NSCameraUsageDescription</key>
+    <string>Used to scan QR codes and printed text into shortcut ideas. Frames are processed on-device only.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Shortcut Genius uses the microphone only when you tap the mic button to dictate a shortcut idea. Audio is never sent anywhere unless you've explicitly added a cloud AI key.</string>
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>Speech recognition turns your spoken idea into text on-device so we can build a shortcut for it.</string>
+    <key>NSUserActivityTypes</key>
+    <array>
+        <string>com.shortcutgenius.create</string>
+    </array>
+    <key>ITSAppUsesNonExemptEncryption</key>
+    <false/>
+    <key>LSApplicationQueriesSchemes</key>
+    <array>
+        <string>shortcuts</string>
+    </array>
     <key>UTExportedTypeDeclarations</key>
     <array>
         <dict>
@@ -51,22 +69,6 @@
                 <array><string>shortcut</string></array>
             </dict>
         </dict>
-    </array>
-
-    <key>NSMicrophoneUsageDescription</key>
-    <string>Shortcut Genius uses the microphone only when you tap the mic button to dictate a shortcut idea. Audio is never sent anywhere unless you've explicitly added a cloud AI key.</string>
-    <key>NSSpeechRecognitionUsageDescription</key>
-    <string>Speech recognition turns your spoken idea into text on-device so we can build a shortcut for it.</string>
-    <key>NSUserActivityTypes</key>
-    <array>
-        <string>com.shortcutgenius.create</string>
-    </array>
-    <key>ITSAppUsesNonExemptEncryption</key>
-    <false/>
-
-    <key>LSApplicationQueriesSchemes</key>
-    <array>
-        <string>shortcuts</string>
     </array>
 </dict>
 </plist>

@@ -51,10 +51,12 @@ struct ShortcutDetailView: View {
                 .padding()
             }
         }
+        #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
+        #endif
         .toolbar {
             if userShortcut != nil {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .primaryAction) {
                     Menu {
                         Button(role: .destructive) {
                             if let userShortcut {

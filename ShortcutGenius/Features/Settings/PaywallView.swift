@@ -40,9 +40,11 @@ struct PaywallView: View {
                 }
             }
             .navigationTitle("Premium")
+            #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
+            #endif
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .primaryAction) {
                     Button("Close") { dismiss() }
                 }
             }

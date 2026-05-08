@@ -37,10 +37,9 @@ struct HomeView: View {
                     .padding(.top, 8)
                 }
             }
+            #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .principal) { EmptyView() }
-            }
+            #endif
         }
     }
 

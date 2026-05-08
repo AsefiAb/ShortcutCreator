@@ -26,7 +26,9 @@ Pods/
 *.pem
 .env
 .env.*
+!.env.example
 secrets.xcconfig
+*.apikey
 
 # IDE
 .idea/

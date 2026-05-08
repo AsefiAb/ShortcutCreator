@@ -30,17 +30,21 @@ struct AIAction: Sendable {
 @MainActor
 final class AIService {
     enum ServiceError: LocalizedError {
-        case missingAPIKey
+        case missingAPIKey(AIProviderKind)
         case rateLimited
         case decodingFailed
         case providerError(String)
 
         var errorDescription: String? {
             switch self {
-            case .missingAPIKey: return "Add your API key in Settings to use cloud generation."
-            case .rateLimited: return "You've hit your monthly free limit. Upgrade to keep going."
-            case .decodingFailed: return "The AI returned a response we couldn't parse."
-            case .providerError(let m): return m
+            case .missingAPIKey(let kind):
+                return "Add your \(kind.displayName) key in Settings to use cloud generation."
+            case .rateLimited:
+                return "You've hit your monthly free limit. Upgrade to keep going."
+            case .decodingFailed:
+                return "The AI returned a response we couldn't parse."
+            case .providerError(let m):
+                return m
             }
         }
     }
@@ -57,15 +61,23 @@ final class AIService {
         defer { isGenerating = false }
 
         let kind = preferences?.preferredProvider ?? .onDeviceOnly
+        let model = preferences?.preferredAnthropicModel ?? "claude-opus-4-7"
 
         switch kind {
+        case .anthropic:
+            guard let key = APIKeyResolver.resolve(.anthropic) else {
+                throw ServiceError.missingAPIKey(.anthropic)
+            }
+            return try await AnthropicProvider(apiKey: key, model: model).generate(from: prompt, history: history)
         case .openai:
-            let key = KeychainStore.read(forKey: kind.keychainKey) ?? ""
-            guard !key.isEmpty else { throw ServiceError.missingAPIKey }
+            guard let key = APIKeyResolver.resolve(.openai) else {
+                throw ServiceError.missingAPIKey(.openai)
+            }
             return try await OpenAIProvider(apiKey: key).generate(from: prompt, history: history)
         case .grok:
-            let key = KeychainStore.read(forKey: kind.keychainKey) ?? ""
-            guard !key.isEmpty else { throw ServiceError.missingAPIKey }
+            guard let key = APIKeyResolver.resolve(.grok) else {
+                throw ServiceError.missingAPIKey(.grok)
+            }
             return try await GrokProvider(apiKey: key).generate(from: prompt, history: history)
         case .onDeviceOnly:
             return OnDeviceProvider().generate(from: prompt)
@@ -73,13 +85,11 @@ final class AIService {
     }
 }
 
-// Built-in heuristic generator. Used when the user has no API key set.
-// Pattern-matches the prompt to an existing example so first-run is useful
-// without any cloud calls.
+// On-device fallback. Pattern-matches the prompt against the 100+ built-in
+// templates so the app is genuinely useful without any API call.
 struct OnDeviceProvider {
     func generate(from prompt: String) -> AIShortcutResponse {
         let lower = prompt.lowercased()
-
         let scored = ExampleShortcuts.all.map { example -> (ExampleShortcut, Int) in
             let title = example.title.lowercased()
             let summary = example.summary.lowercased()
@@ -90,9 +100,7 @@ struct OnDeviceProvider {
             }
             return (example, score)
         }
-
         let best = scored.max { $0.1 < $1.1 }?.0 ?? ExampleShortcuts.all[0]
-
         return AIShortcutResponse(
             title: best.title,
             summary: best.summary,
@@ -100,9 +108,11 @@ struct OnDeviceProvider {
             icon: best.icon,
             colorHex: best.colorHex,
             actions: best.actions.map {
-                AIAction(identifier: $0.identifier, displayName: $0.displayName, parameters: $0.parameters)
+                AIAction(identifier: $0.identifier,
+                         displayName: $0.displayName,
+                         parameters: $0.parameters)
             },
-            conversational: "I matched your idea to the closest built-in shortcut: \(best.title). Add an OpenAI or Grok key in Settings for fully custom generations."
+            conversational: "I matched your idea to the closest built-in shortcut: \(best.title). Add a Claude, OpenAI, or Grok key in Settings for fully custom generations."
         )
     }
 }

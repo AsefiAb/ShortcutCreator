@@ -1,99 +1,87 @@
 # Shortcut Genius
 
-An iOS app that turns plain-English ideas into real iOS Shortcuts. 100+ ready-made examples, a chat-based AI generator, and one-tap install into the native Shortcuts app.
+A multiplatform indie app for **iOS 18+** and **macOS 15+** that turns plain-English ideas into real iOS Shortcuts. 100+ ready-made templates, AI-powered generation (Claude, OpenAI, or Grok — your choice, your key), and one-tap install into the native Shortcuts app.
 
-> **Status**: Production-ready scaffold. All major features wired up. You'll need a Mac + Xcode to compile, run on a device, and ship.
+> **Status**: production-grade scaffold, audited, multiplatform. Compile + ship from a Mac.
 
-## What's in here
+## Highlights
+
+- **Native iOS + macOS** from one codebase. iPhone gets a tab bar + DataScanner. Mac gets a sidebar, a Settings scene, a `⌘N` keyboard shortcut, and a menu-bar extra for quick generation without opening the app.
+- **100+ shortcuts** seeded across 10 categories (Driving, Focus, Family, Work, Health, Smart Home, Travel, Productivity, Creative, Wellness).
+- **AI provider abstraction**: Anthropic Claude (default), OpenAI, xAI/Grok, or fully on-device pattern matching. Keys stay in the iPhone Keychain.
+- **App Intents + AppShortcutsProvider** — your custom shortcuts appear in the Shortcuts app, in Spotlight, and in Siri automatically. No "Allow Untrusted Shortcuts" toggle needed.
+- **WidgetKit**: Popular Shortcuts + Quick Create on the iOS home screen.
+- **Privacy manifest**, no third-party SDKs, no analytics, no telemetry.
+- **StoreKit 2** with yearly subscription, lifetime purchase, optional tip — and a "Free forever is fine!" exit on every paywall.
+
+## Repo layout
 
 ```
 ShortcutCreator/
-├── ShortcutGenius/                    iOS app source (Swift + SwiftUI)
-│   ├── App/                           App entry, environment
-│   ├── Models/                        SwiftData models + entitlements
-│   ├── Data/                          100+ seed shortcuts + .shortcut builder
-│   ├── Features/                      Home, Chat, Library, Detail, Settings, Paywall, Onboarding
-│   ├── Services/                      AI, StoreKit, Keychain, Speech, Haptics
-│   ├── AppIntents/                    AppShortcutsProvider for Siri + Shortcuts app
-│   ├── DesignSystem/                  Theme + Liquid Glass styling
-│   └── Resources/                     Info.plist, PrivacyInfo, entitlements
-├── ShortcutGeniusWidgets/             WidgetKit extension (home-screen widgets)
+├── ShortcutGenius/                    Shared SwiftUI source
+│   ├── App/                           App entry, environment, Scenes
+│   ├── Models/                        SwiftData models, entitlements, prefs
+│   ├── Data/                          100+ examples + .shortcut builder
+│   ├── Features/                      UI features
+│   │   ├── Home/                      Discover screen
+│   │   ├── Chat/                      AI creator
+│   │   ├── Library/                   Saved shortcuts
+│   │   ├── Detail/                    Shortcut detail
+│   │   ├── Settings/                  Settings + paywall
+│   │   ├── Onboarding/                Onboarding
+│   │   ├── Scan/                      iOS DataScanner integration
+│   │   └── Mac/                       macOS sidebar + menu-bar extra
+│   ├── Services/                      AI providers, StoreKit, Keychain, Speech, Haptics, Installer
+│   ├── AppIntents/                    AppShortcutsProvider
+│   ├── DesignSystem/                  Theme + Liquid Glass
+│   ├── Resources/                     Info.plist (iOS), macOS-Info.plist, entitlements, privacy manifest
+│   └── Assets.xcassets/               AppIcon + AccentColor
+├── ShortcutGeniusWidgets/             WidgetKit extension
 ├── ShortcutGeniusTests/               Unit tests
-├── StoreKitConfig/                    StoreKit configuration for testing IAP
-├── docs/                              Publishing guide + App Store metadata
-├── project.yml                        XcodeGen project definition
-└── setup.sh                           Generates Xcode project on macOS
+├── StoreKitConfig/                    .storekit for IAP testing
+├── docs/                              Publishing, build, secrets, privacy, App Store metadata
+├── scripts/                           setup-secrets.sh
+├── .github/workflows/ci.yml           Builds iOS + macOS on every PR
+├── project.yml                        XcodeGen project definition (iOS + macOS targets)
+└── setup.sh                           One-command project generation on macOS
 ```
 
-## Build it (on a Mac)
-
-You need:
-
-- A Mac running macOS 14.5+ (macOS 15+ recommended for iOS 26 SDK).
-- [Xcode](https://developer.apple.com/xcode/) 16 or newer.
-- An iPhone running iOS 18+ for device testing.
-- An [Apple Developer](https://developer.apple.com/programs/) account ($99/year) **only when you're ready to ship to the App Store**. For local testing on your own iPhone, a free Apple ID works.
-
-### Steps
+## Quick start
 
 ```bash
-# 1. Clone
+# On a Mac
 git clone https://github.com/AsefiAb/ShortcutCreator.git
 cd ShortcutCreator
-
-# 2. Install XcodeGen (one-time)
 brew install xcodegen
-
-# 3. Generate the Xcode project
 ./setup.sh
-
-# 4. Open in Xcode
 open ShortcutGenius.xcodeproj
 ```
 
-In Xcode:
+In Xcode pick **`ShortcutGenius (iOS)`** or **`ShortcutGenius (macOS)`** and run.
 
-1. Select the `ShortcutGenius` scheme + your iPhone or a simulator.
-2. Under **Signing & Capabilities**, set your Team (free Apple ID is fine for personal builds).
-3. Press **Run** (⌘R).
+For local AI dev:
 
-If you don't want XcodeGen, you can also create a fresh "App" project in Xcode (iOS, SwiftUI, Swift, iOS 18 deployment target) and drag the `ShortcutGenius/`, `ShortcutGeniusWidgets/`, and `ShortcutGeniusTests/` folders into it. Configure two targets: app and widget extension.
+```bash
+cp .env.example .env       # paste your ANTHROPIC_API_KEY
+source scripts/setup-secrets.sh
+```
 
-## Architecture at a glance
+Or skip the env-var route entirely and paste your key in **Settings → AI generation** at runtime — that flow works for end users too. The shipping app contains zero bundled keys.
 
-- **SwiftData** for all local storage — no cloud sync by default.
-- **`@Observable` + `Environment`** for app-wide state (instead of `ObservableObject` + `EnvironmentObject`).
-- **App Intents + `AppShortcutsProvider`** — exposes the shortcuts you create as native iOS Shortcuts. This is the App Store-friendly path: shortcuts appear automatically in the Shortcuts app, no "Allow Untrusted Shortcuts" toggle.
-- **`.shortcut` plist builder** — for power users who want a stand-alone shortcut file, the app also builds a binary plist that the user can import via the share sheet (requires "Allow Untrusted Shortcuts" in Settings → Shortcuts).
-- **AI provider abstraction** — `AIProvider` protocol with `OpenAIProvider`, `GrokProvider`, and `OnDeviceProvider` (heuristic match against the 100+ built-ins). Users paste their own API key in Settings; keys live in the Keychain.
-- **StoreKit 2** — subscriptions + non-consumables, transaction listener, restore.
-- **WidgetKit** — Popular Shortcuts + Quick Create home-screen widgets.
+## Documentation
 
-## Privacy posture
-
-- No analytics. No telemetry. No third-party SDKs.
-- All data stays on the device unless the user pastes their own AI key, in which case prompts go to that provider only.
-- `PrivacyInfo.xcprivacy` declares only the API access categories actually used (UserDefaults, file timestamps, system boot time, disk space).
+- [`docs/BUILD_AND_ARCHIVE.md`](docs/BUILD_AND_ARCHIVE.md) — local builds + App Store archives for both platforms.
+- [`docs/PUBLISHING_GUIDE.md`](docs/PUBLISHING_GUIDE.md) — Apple Developer enrollment → App Store submission, 2026 edition.
+- [`docs/SECRETS.md`](docs/SECRETS.md) — `ANTHROPIC_API_KEY` handling, GitHub Secrets, Keychain.
+- [`docs/APP_STORE_METADATA.md`](docs/APP_STORE_METADATA.md) — paste-ready App Store Connect copy.
+- [`docs/PRIVACY.md`](docs/PRIVACY.md) — public privacy policy.
 
 ## Monetization
 
-- **Free forever**: 100+ examples + 10 AI generations / month + on-device fallback.
-- **$19.99/year** with a 7-day free trial → unlimited.
-- **$49 lifetime** one-time purchase.
-- **$4.99 tip** "Buy the dev a coffee" — strictly optional, never gated.
-- Paywall is dismissible on every screen with a "Free forever is fine!" exit.
-
-## Publishing
-
-See [docs/PUBLISHING_GUIDE.md](docs/PUBLISHING_GUIDE.md) for the full step-by-step from "no Apple account" to "live on the App Store", including:
-
-- Apple Developer Program enrollment ($99/year)
-- App Store Connect setup
-- Screenshots + metadata
-- TestFlight beta
-- App Review (2026 requirements)
-
-Metadata copy you can paste straight into App Store Connect: [docs/APP_STORE_METADATA.md](docs/APP_STORE_METADATA.md).
+- **Free forever**: 100+ examples + 10 AI generations/month + on-device fallback.
+- **$19.99/year** (7-day trial) → unlimited.
+- **$49 lifetime** one-time.
+- **$4.99 tip** ("Buy the dev a coffee") — strictly optional.
 
 ## License
 

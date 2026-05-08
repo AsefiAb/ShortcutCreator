@@ -19,8 +19,7 @@ struct ChatView: View {
                             LazyVStack(spacing: 12) {
                                 if messages.isEmpty { EmptyState() }
                                 ForEach(messages) { msg in
-                                    ChatBubble(message: msg)
-                                        .id(msg.id)
+                                    ChatBubble(message: msg).id(msg.id)
                                 }
                                 if let generatedPreview {
                                     GeneratedPreviewCard(response: generatedPreview) {
@@ -36,21 +35,35 @@ struct ChatView: View {
                             .padding(.bottom, 20)
                         }
                         .onChange(of: messages.count) { _, _ in
-                            if let last = messages.last { proxy.scrollTo(last.id, anchor: .bottom) }
+                            if let last = messages.last {
+                                withAnimation { proxy.scrollTo(last.id, anchor: .bottom) }
+                            }
                         }
                     }
                     InputBar(
                         text: $draft,
                         isRecording: env.speech.isRecording,
+                        canMic: canUseMic,
                         onSend: { send() },
                         onMic: { Task { await toggleMic() } }
                     )
                 }
             }
             .navigationTitle("Create")
+            #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
+            #endif
             .sheet(isPresented: $showingPaywall) { PaywallView() }
+            .onAppear { wireDeepLink() }
         }
+    }
+
+    private var canUseMic: Bool {
+        #if os(iOS)
+        return true
+        #else
+        return false
+        #endif
     }
 
     private func send() {
@@ -68,9 +81,14 @@ struct ChatView: View {
         try? modelContext.save()
         draft = ""
 
-        Task {
+        // Audit fix: snapshot history values before crossing into Task — the
+        // @Query result is bound to the SwiftUI view's actor context.
+        let history: [ChatTurn] = messages.suffix(8).map {
+            ChatTurn(role: $0.role.rawValue, content: $0.content)
+        }
+
+        Task { @MainActor in
             do {
-                let history = messages.suffix(8).map { ChatTurn(role: $0.role.rawValue, content: $0.content) }
                 let response = try await env.aiService.generate(prompt: prompt, history: history)
                 generatedPreview = response
                 let assistantMsg = ChatMessage(role: .assistant, content: response.conversational)
@@ -88,6 +106,7 @@ struct ChatView: View {
     }
 
     private func toggleMic() async {
+        #if os(iOS)
         if env.speech.isRecording {
             env.speech.stop()
             draft = env.speech.transcript
@@ -98,6 +117,7 @@ struct ChatView: View {
         }
         guard env.speech.authState == .authorized else { return }
         try? env.speech.start()
+        #endif
     }
 
     private func save(_ response: AIShortcutResponse) {
@@ -125,16 +145,26 @@ struct ChatView: View {
     }
 
     private func install(_ response: AIShortcutResponse) async {
-        let draft = ShortcutDraft(from: ExampleShortcut(
+        let example = ExampleShortcut(
             id: UUID().uuidString,
             title: response.title,
             summary: response.summary,
             category: response.category,
             icon: response.icon,
             colorHex: response.colorHex,
-            actions: response.actions.map { TemplateAction(identifier: $0.identifier, displayName: $0.displayName, parameters: $0.parameters) }
-        ))
-        try? await env.installer.install(draft)
+            actions: response.actions.map {
+                TemplateAction(identifier: $0.identifier, displayName: $0.displayName, parameters: $0.parameters)
+            }
+        )
+        try? await env.installer.install(ShortcutDraft(from: example))
+    }
+
+    private func wireDeepLink() {
+        DeepLinkRouter.shared.listeners.append { destination in
+            if case .create(let prompt) = destination, !prompt.isEmpty {
+                draft = prompt
+            }
+        }
     }
 }
 
@@ -184,12 +214,10 @@ private struct ThinkingDots: View {
         .padding(12)
         .background(.white.opacity(0.85), in: RoundedRectangle(cornerRadius: 16))
         .frame(maxWidth: .infinity, alignment: .leading)
-        .onAppear {
-            Task {
-                while !Task.isCancelled {
-                    try? await Task.sleep(for: .milliseconds(280))
-                    await MainActor.run { dot = (dot + 1) % 3 }
-                }
+        .task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(280))
+                dot = (dot + 1) % 3
             }
         }
     }
@@ -224,6 +252,7 @@ private struct GeneratedPreviewCard: View {
                         .background(Theme.accent, in: Capsule())
                         .foregroundStyle(.white)
                 }
+                .buttonStyle(.plain)
                 Button(action: onSave) {
                     Label("Save", systemImage: "tray.and.arrow.down")
                         .font(.subheadline.weight(.medium))
@@ -242,17 +271,21 @@ private struct GeneratedPreviewCard: View {
 private struct InputBar: View {
     @Binding var text: String
     let isRecording: Bool
+    let canMic: Bool
     let onSend: () -> Void
     let onMic: () -> Void
 
     var body: some View {
         HStack(spacing: 8) {
-            Button(action: onMic) {
-                Image(systemName: isRecording ? "mic.fill" : "mic")
-                    .font(.title3)
-                    .foregroundStyle(isRecording ? Color.red : Theme.accent)
-                    .frame(width: 44, height: 44)
-                    .background(.white.opacity(0.7), in: Circle())
+            if canMic {
+                Button(action: onMic) {
+                    Image(systemName: isRecording ? "mic.fill" : "mic")
+                        .font(.title3)
+                        .foregroundStyle(isRecording ? Color.red : Theme.accent)
+                        .frame(width: 44, height: 44)
+                        .background(.white.opacity(0.7), in: Circle())
+                }
+                .buttonStyle(.plain)
             }
             TextField("Describe a shortcut idea…", text: $text, axis: .vertical)
                 .lineLimit(1...4)
@@ -266,6 +299,7 @@ private struct InputBar: View {
                     .font(.system(size: 32))
                     .foregroundStyle(text.trimmingCharacters(in: .whitespaces).isEmpty ? .secondary : Theme.accent)
             }
+            .buttonStyle(.plain)
             .disabled(text.trimmingCharacters(in: .whitespaces).isEmpty)
         }
         .padding(.horizontal, 12)
