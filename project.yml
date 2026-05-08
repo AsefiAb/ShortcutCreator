@@ -1,0 +1,82 @@
+name: ShortcutGenius
+options:
+  bundleIdPrefix: com.shortcutgenius
+  deploymentTarget:
+    iOS: "18.0"
+  developmentLanguage: en
+  xcodeVersion: "16.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    GENERATE_INFOPLIST_FILE: NO
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    DEVELOPMENT_TEAM: ""
+
+targets:
+  ShortcutGenius:
+    type: application
+    platform: iOS
+    deploymentTarget: "18.0"
+    sources:
+      - path: ShortcutGenius
+        excludes:
+          - "Resources/Info.plist"
+          - "Resources/PrivacyInfo.xcprivacy"
+          - "Resources/ShortcutGenius.entitlements"
+    resources:
+      - ShortcutGenius/Resources/PrivacyInfo.xcprivacy
+    info:
+      path: ShortcutGenius/Resources/Info.plist
+    entitlements:
+      path: ShortcutGenius/Resources/ShortcutGenius.entitlements
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.shortcutgenius.app
+        PRODUCT_NAME: "Shortcut Genius"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SUPPORTS_MACCATALYST: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        CURRENT_PROJECT_VERSION: 1
+        MARKETING_VERSION: "1.0.0"
+        CODE_SIGN_STYLE: Automatic
+    dependencies:
+      - target: ShortcutGeniusWidgets
+        embed: true
+    scheme:
+      testTargets:
+        - ShortcutGeniusTests
+      gatherCoverageData: true
+
+  ShortcutGeniusWidgets:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: "18.0"
+    sources:
+      - path: ShortcutGeniusWidgets
+        excludes:
+          - Info.plist
+      - path: ShortcutGenius/Data
+      - path: ShortcutGenius/DesignSystem
+    info:
+      path: ShortcutGeniusWidgets/Info.plist
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.shortcutgenius.app.widgets
+        PRODUCT_NAME: ShortcutGeniusWidgets
+        SKIP_INSTALL: YES
+        CODE_SIGN_STYLE: Automatic
+
+  ShortcutGeniusTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "18.0"
+    sources:
+      - ShortcutGeniusTests
+    dependencies:
+      - target: ShortcutGenius
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.shortcutgenius.app.tests
+        CODE_SIGN_STYLE: Automatic
